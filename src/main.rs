@@ -142,6 +142,8 @@ fn main() {
                 width = max + 8
             );
         }
+
+        return;
     }
 
     init(&config, directory);

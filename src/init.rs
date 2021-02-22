@@ -57,12 +57,18 @@ fn create_files(
 
         if init_config.files_containing_extras.contains(file) {
             let extra_regex =
-                Regex::new(r#"( *\t*)#!startExtra ".*?"\n[\s\S]*?#!endExtra\n?"#).unwrap();
+                Regex::new(r#"( *\t*)(#|//)!startExtra ".*?"\n[\s\S]*?(#|//)!endExtra\n?"#)
+                    .unwrap();
             let extra_name_regex = Regex::new(r#"(?<=#!startExtra ").*(?=")"#).unwrap();
+            let extra_name_regex_alt = Regex::new(r#"(?<=//!startExtra ").*(?=")"#).unwrap();
 
             while extra_regex.is_match(&file_contents).unwrap() {
                 let extra_full = extra_regex.find(&file_contents).unwrap().unwrap().as_str();
-                let extra_name = extra_name_regex.find(extra_full).unwrap().unwrap().as_str();
+                let extra_name = extra_name_regex
+                    .find(extra_full)
+                    .unwrap()
+                    .unwrap_or(extra_name_regex_alt.find(extra_full).unwrap().unwrap())
+                    .as_str();
                 if config.extras.contains(&String::from(extra_name)) {
                     let mut split_extra: Vec<&str> = extra_full.split('\n').collect();
                     split_extra.remove(0);

@@ -64,12 +64,19 @@ fn create_files(
 
             while extra_regex.is_match(&file_contents).unwrap() {
                 let extra_full = extra_regex.find(&file_contents).unwrap().unwrap().as_str();
-                let extra_name = extra_name_regex
-                    .find(extra_full)
-                    .unwrap()
-                    .unwrap_or(extra_name_regex_alt.find(extra_full).unwrap().unwrap())
-                    .as_str();
-                if config.extras.contains(&String::from(extra_name)) {
+                let extra_name = if extra_name_regex.is_match(extra_full).unwrap() {
+                    extra_name_regex.find(extra_full)
+                } else {
+                    extra_name_regex_alt.find(extra_full)
+                }
+                .unwrap()
+                .unwrap()
+                .as_str();
+
+                if config.extras.contains(&String::from(extra_name))
+                    || (!config.extras.contains(&String::from(&extra_name[1..]))
+                        && extra_name.chars().nth(0).unwrap() == '!')
+                {
                     let mut split_extra: Vec<&str> = extra_full.split('\n').collect();
                     split_extra.remove(0);
                     split_extra.remove(split_extra.len() - 2);

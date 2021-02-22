@@ -14,6 +14,7 @@
   "extras": [
     {
       "name": "pytest",
+      "description": "Run tests on your code with pytest. Also sets up GitHub Actions integration.",
       "files": [
         "tests/test_example.py",
         "pytest.ini",
@@ -22,6 +23,7 @@
     },
     {
       "name": "cli",
+      "description": "Sets up your package to provide a CLI.",
       "files": [
         "{{projectNameLower}}/cli.py"
       ]

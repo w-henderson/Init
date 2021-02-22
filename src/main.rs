@@ -127,8 +127,20 @@ fn main() {
         .unwrap();
 
         println!("available extras for {}:\n", config.language);
+        let max = init_config
+            .extras
+            .iter()
+            .max_by(|x, y| x.name.len().cmp(&y.name.len()))
+            .unwrap()
+            .name
+            .len();
         for extra in init_config.extras {
-            println!("  - {}", extra.name);
+            println!(
+                "  - {:width$}{}",
+                extra.name,
+                extra.description,
+                width = max + 8
+            );
         }
     }
 

@@ -16,6 +16,7 @@ pub struct InitConfig {
 #[derive(Serialize, Deserialize)]
 pub struct Extra {
     pub name: String,
+    pub description: String,
     pub files: Vec<String>,
 }
 

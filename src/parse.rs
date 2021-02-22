@@ -20,18 +20,18 @@ pub struct Extra {
 }
 
 pub fn get_directory() -> Dir<'static> {
-    return include_dir!("./data");
+    include_dir!("./data")
 }
 
 pub fn parse_init_file(file: &str) -> Result<InitConfig> {
-    return serde_json::from_str(file);
+    serde_json::from_str(file)
 }
 
 pub fn replace_placeholders(string: &str, config: &ProjectConfig) -> String {
     let project_name_lower = config.name.to_ascii_lowercase().replace(" ", "_");
-    return string
+    string
         .replace("{{projectName}}", &config.name)
         .replace("{{projectNameLower}}", &project_name_lower)
         .replace("{{author}}", &config.author)
-        .replace("{{projectDescription}}", &config.description);
+        .replace("{{projectDescription}}", &config.description)
 }

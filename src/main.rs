@@ -1,101 +1,136 @@
+mod init;
 mod parse;
 
-use fancy_regex::Regex;
-use parse::InitConfig;
-use std::{
-    fs::{create_dir_all, File},
-    io::Write,
-    path::Path,
-    process::Command,
-};
+use clap::{crate_version, App, Arg};
+use init::init;
+use std::env::current_dir;
 
+#[derive(Debug)]
 pub struct ProjectConfig {
     pub language: String,
     pub name: String,
+    pub folder_name: String,
     pub author: String,
     pub description: String,
     pub extras: Vec<String>,
+    pub git: bool,
 }
 
 fn main() {
-    let config = ProjectConfig {
-        language: "python".to_string(),
-        name: "PogChamp".to_string(),
-        author: "William Henderson".to_string(),
-        description: "".to_string(),
-        extras: vec![String::from("pytest")],
-    };
-    init(&config);
-}
+    // Set up the argument parsing and define all the arguments
+    let args =
+        App::new("init")
+            .version(crate_version!())
+            .author("William Henderson")
+            .about("Initialise any project with one simple command.")
+            .arg(
+                Arg::with_name("language")
+                    .required(true)
+                    .index(1)
+                    .help("Language to initialise the project for."),
+            )
+            .arg(Arg::with_name("name").index(2).help(
+                "Name of the project. If unspecified, will be implied from the directory name.",
+            ))
+            .arg(
+                Arg::with_name("author")
+                    .short("a")
+                    .long("author")
+                    .takes_value(true)
+                    .value_name("AUTHOR")
+                    .help("Name of the project author."),
+            )
+            .arg(
+                Arg::with_name("description")
+                    .short("d")
+                    .long("desc")
+                    .takes_value(true)
+                    .value_name("DESCRIPTION")
+                    .help("A short description for the project."),
+            )
+            .arg(
+                Arg::with_name("extras")
+                    .short("e")
+                    .long("extras")
+                    .takes_value(true)
+                    .value_name("EXTRA")
+                    .multiple(true)
+                    .help("Names of optional extras to add. These can be found by running `init <language> --list-extras`.")
+            )
+            .arg(
+                Arg::with_name("list-extras")
+                    .short("l")
+                    .long("list-extras")
+                    .help("List extras for the specified language.")
+            )
+            .arg(
+                Arg::with_name("no-git")
+                    .long("--no-git")
+                    .help("Prevent init from initialising a Git repo.")
+            )
+            .get_matches();
 
-fn init(config: &ProjectConfig) {
-    let dir = parse::get_directory();
-    let init_file_str = dir
-        .get_file(format!("{}/init.json", config.language))
+    let cwd = current_dir()
         .unwrap()
-        .contents_utf8()
-        .unwrap();
+        .file_name()
+        .unwrap()
+        .to_str()
+        .unwrap()
+        .to_owned();
 
-    let init_config: InitConfig = parse::parse_init_file(init_file_str).unwrap();
-    create_files(&init_config.files, &dir, config, &init_config);
+    let project_name = if args.is_present("name") && args.value_of("name").unwrap() != "." {
+        args.value_of("name").unwrap()
+    } else {
+        &cwd
+    };
 
-    for extra in &init_config.extras {
-        if config.extras.contains(&extra.name) {
-            create_files(&extra.files, &dir, config, &init_config);
+    // Parse the arguments into a config object
+    let config = ProjectConfig {
+        language: args.value_of("language").unwrap().to_string(),
+        name: project_name.to_string(),
+        folder_name: args.value_of("name").unwrap_or(".").replace(" ", ""),
+        author: args.value_of("author").unwrap_or("").to_string(),
+        description: args.value_of("description").unwrap_or("").to_string(),
+        extras: args
+            .values_of("extras")
+            .unwrap_or_default()
+            .map(String::from)
+            .collect(),
+        git: !args.is_present("no-git"),
+    };
+
+    // Ensure that the language is valid or list supported languages
+    let directory = parse::get_directory();
+    if config.language != "list"
+        && (!directory.contains(&config.language)
+            || !config.language.chars().all(char::is_alphabetic))
+    {
+        println!("error: Language not supported, try `init list` to list supported languages");
+        return;
+    } else if config.language == "list" {
+        println!("init currently supports the following languages:\n");
+        for language in directory.dirs() {
+            println!("  - {}", language.path);
         }
+        return;
     }
 
-    println!("{}", init_config.language);
-}
-
-fn create_files(
-    files: &Vec<String>,
-    dir: &include_dir::Dir,
-    config: &ProjectConfig,
-    init_config: &InitConfig,
-) {
-    let project_name_no_spaces = config.name.replace(" ", "");
-
-    for file in files {
-        let file_path = format!(
-            "{}/{}",
-            &project_name_no_spaces,
-            parse::replace_placeholders(&file, config),
-        );
-        let file_path_obj = Path::new(&file_path);
-        let prefix = file_path_obj.parent().unwrap();
-        create_dir_all(prefix).unwrap();
-        let mut file_obj = File::create(file_path_obj).unwrap();
-        let mut file_contents = String::from(
-            dir.get_file(format!("{}/{}", config.language, file))
+    // If listing available extras, do that instead of initialising a project
+    if args.is_present("list-extras") {
+        let init_config = parse::parse_init_file(
+            directory
+                .get_file(format!("{}/init.json", config.language))
                 .unwrap()
                 .contents_utf8()
-                .unwrap()
-                .replace("\r\n", "\n"), // convert CRLF to LF because regex
-        );
+                .unwrap(),
+        )
+        .unwrap();
 
-        if init_config.files_containing_extras.contains(file) {
-            let extra_regex =
-                Regex::new(r#"( *\t*)#!startExtra ".*?"\n[\s\S]*?#!endExtra\n?"#).unwrap();
-            let extra_name_regex = Regex::new(r#"(?<=#!startExtra ").*(?=")"#).unwrap();
-
-            while extra_regex.is_match(&file_contents).unwrap() {
-                let extra_full = extra_regex.find(&file_contents).unwrap().unwrap().as_str();
-                let extra_name = extra_name_regex.find(extra_full).unwrap().unwrap().as_str();
-                if config.extras.contains(&String::from(extra_name)) {
-                    let mut split_extra: Vec<&str> = extra_full.split("\n").collect();
-                    split_extra.remove(0);
-                    split_extra.remove(split_extra.len() - 2);
-                    let extra_contents = split_extra.join("\n");
-                    file_contents = file_contents.replace(extra_full, &extra_contents);
-                } else {
-                    file_contents = file_contents.replace(extra_full, "");
-                }
-            }
+        println!("available extras for {}:\n", config.language);
+        for extra in init_config.extras {
+            println!("  - {}", extra.name);
         }
-
-        file_obj
-            .write(parse::replace_placeholders(&file_contents, config).as_bytes())
-            .unwrap();
     }
+
+    init(&config, directory);
 }

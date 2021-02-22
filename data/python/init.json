@@ -1,0 +1,29 @@
+{
+  "language": "Python",
+  "files": [
+    "{{projectNameLower}}/__init__.py",
+    "{{projectNameLower}}/__main__.py",
+    ".gitignore",
+    "requirements.txt",
+    "setup.py"
+  ],
+  "filesContainingExtras": [
+    "setup.py"
+  ],
+  "extras": [
+    {
+      "name": "pytest",
+      "files": [
+        "tests/test_example.py",
+        "pytest.ini",
+        ".github/workflows/test.yml"
+      ]
+    },
+    {
+      "name": "cli",
+      "files": [
+        "{{projectNameLower}}/cli.py"
+      ]
+    }
+  ]
+}

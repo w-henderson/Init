@@ -1,6 +1,7 @@
 mod parse;
 
-use parse::InitFile;
+use fancy_regex::Regex;
+use parse::InitConfig;
 use std::{
     fs::{create_dir_all, File},
     io::Write,
@@ -8,60 +9,93 @@ use std::{
     process::Command,
 };
 
-fn main() {
-    init("python", "PogChamp", "William Henderson", vec![]);
+pub struct ProjectConfig {
+    pub language: String,
+    pub name: String,
+    pub author: String,
+    pub description: String,
+    pub extras: Vec<String>,
 }
 
-fn init(data_name: &str, project_name: &str, author: &str, extras: Vec<String>) {
+fn main() {
+    let config = ProjectConfig {
+        language: "python".to_string(),
+        name: "PogChamp".to_string(),
+        author: "William Henderson".to_string(),
+        description: "".to_string(),
+        extras: vec![String::from("pytest")],
+    };
+    init(&config);
+}
+
+fn init(config: &ProjectConfig) {
     let dir = parse::get_directory();
     let init_file_str = dir
-        .get_file(format!("{}/init.json", data_name))
+        .get_file(format!("{}/init.json", config.language))
         .unwrap()
         .contents_utf8()
         .unwrap();
 
-    let init_file: InitFile = parse::parse_init_file(init_file_str).unwrap();
-    create_files(&init_file.files, &dir, data_name, project_name, author, "");
+    let init_config: InitConfig = parse::parse_init_file(init_file_str).unwrap();
+    create_files(&init_config.files, &dir, config, &init_config);
 
-    for extra in init_file.extras {
-        if extras.contains(&extra.name) {
-            create_files(&extra.files, &dir, data_name, project_name, author, "");
+    for extra in &init_config.extras {
+        if config.extras.contains(&extra.name) {
+            create_files(&extra.files, &dir, config, &init_config);
         }
     }
 
-    println!("{}", init_file.language);
+    println!("{}", init_config.language);
 }
 
 fn create_files(
     files: &Vec<String>,
     dir: &include_dir::Dir,
-    data_name: &str,
-    project_name: &str,
-    author: &str,
-    description: &str,
+    config: &ProjectConfig,
+    init_config: &InitConfig,
 ) {
-    let project_name_no_spaces = project_name.replace(" ", "");
+    let project_name_no_spaces = config.name.replace(" ", "");
 
     for file in files {
         let file_path = format!(
             "{}/{}",
             &project_name_no_spaces,
-            parse::replace_placeholders(&file, project_name, author, description),
+            parse::replace_placeholders(&file, config),
         );
         let file_path_obj = Path::new(&file_path);
         let prefix = file_path_obj.parent().unwrap();
         create_dir_all(prefix).unwrap();
         let mut file_obj = File::create(file_path_obj).unwrap();
-        let file_contents = dir
-            .get_file(format!("{}/{}", data_name, file))
-            .unwrap()
-            .contents_utf8()
-            .unwrap();
+        let mut file_contents = String::from(
+            dir.get_file(format!("{}/{}", config.language, file))
+                .unwrap()
+                .contents_utf8()
+                .unwrap()
+                .replace("\r\n", "\n"), // convert CRLF to LF because regex
+        );
+
+        if init_config.files_containing_extras.contains(file) {
+            let extra_regex =
+                Regex::new(r#"( *\t*)#!startExtra ".*?"\n[\s\S]*?#!endExtra\n?"#).unwrap();
+            let extra_name_regex = Regex::new(r#"(?<=#!startExtra ").*(?=")"#).unwrap();
+
+            while extra_regex.is_match(&file_contents).unwrap() {
+                let extra_full = extra_regex.find(&file_contents).unwrap().unwrap().as_str();
+                let extra_name = extra_name_regex.find(extra_full).unwrap().unwrap().as_str();
+                if config.extras.contains(&String::from(extra_name)) {
+                    let mut split_extra: Vec<&str> = extra_full.split("\n").collect();
+                    split_extra.remove(0);
+                    split_extra.remove(split_extra.len() - 2);
+                    let extra_contents = split_extra.join("\n");
+                    file_contents = file_contents.replace(extra_full, &extra_contents);
+                } else {
+                    file_contents = file_contents.replace(extra_full, "");
+                }
+            }
+        }
+
         file_obj
-            .write(
-                parse::replace_placeholders(file_contents, project_name, author, description)
-                    .as_bytes(),
-            )
+            .write(parse::replace_placeholders(&file_contents, config).as_bytes())
             .unwrap();
     }
 }

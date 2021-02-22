@@ -20,8 +20,8 @@ setup(
     extras_require={
         "tests": ["pytest"],
     },
-    #!endExtra "pytest"
+    #!endExtra
     #!startExtra "cli"
     entry_points={"console_scripts": ["{{projectNameLower}} = {{projectNameLower}}.cli:main"]},
-    #!endExtra "cli"
+    #!endExtra
 )

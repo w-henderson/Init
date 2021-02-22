@@ -2,8 +2,10 @@ use include_dir::{include_dir, Dir};
 use serde::{Deserialize, Serialize};
 use serde_json::Result;
 
+use crate::ProjectConfig;
+
 #[derive(Serialize, Deserialize)]
-pub struct InitFile {
+pub struct InitConfig {
     pub language: String,
     pub files: Vec<String>,
     #[serde(rename = "filesContainingExtras")]
@@ -21,20 +23,15 @@ pub fn get_directory() -> Dir<'static> {
     return include_dir!("./data");
 }
 
-pub fn parse_init_file(file: &str) -> Result<InitFile> {
+pub fn parse_init_file(file: &str) -> Result<InitConfig> {
     return serde_json::from_str(file);
 }
 
-pub fn replace_placeholders(
-    string: &str,
-    project_name: &str,
-    author: &str,
-    description: &str,
-) -> String {
-    let project_name_lower = project_name.to_ascii_lowercase().replace(" ", "_");
+pub fn replace_placeholders(string: &str, config: &ProjectConfig) -> String {
+    let project_name_lower = config.name.to_ascii_lowercase().replace(" ", "_");
     return string
-        .replace("{{projectName}}", project_name)
+        .replace("{{projectName}}", &config.name)
         .replace("{{projectNameLower}}", &project_name_lower)
-        .replace("{{author}}", author)
-        .replace("{{projectDescription}}", description);
+        .replace("{{author}}", &config.author)
+        .replace("{{projectDescription}}", &config.description);
 }

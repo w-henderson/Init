@@ -1,0 +1,26 @@
+{
+  "name": "{{projectNameLower}}",
+  "version": "0.0.1",
+  "description": "{{projectDescription}}",
+  "author": "{{author}}",
+  "scripts": {
+    //!startExtra "typescript"
+    "dev-build-ts": "tsc -w",
+    //!endExtra
+    //!startExtra "sass"
+    "dev-build-sass": "sass src/styles:src/compiled/styles --no-source-map --style compressed --watch",
+    //!endExtra
+    //!startExtra "surge"
+    "dev-deploy": "surge src https://{{projectNameLower}}-dev.surge.sh",
+    //!endExtra
+    "host": "python -m http.server 80 --directory src"
+  },
+  "devDependencies": {
+    //!startExtra "typescript"
+    "typescript": "^4.1.3",
+    //!endExtra
+    //!startExtra "sass"
+    "sass": "^1.32.2"
+    //!endExtra
+  }
+}

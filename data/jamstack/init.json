@@ -1,0 +1,47 @@
+{
+  "language": "Jamstack",
+  "files": [
+    "package.json",
+    "src/index.html",
+    "src/images/PLACEHOLDER",
+    "src/vendor/PLACEHOLDER",
+    "src/styles/main.css",
+    "src/scripts/{{projectNameLower}}.js"
+  ],
+  "commands": [],
+  "filesContainingExtras": [
+    "package.json",
+    "src/index.html"
+  ],
+  "extras": [
+    {
+      "name": "typescript",
+      "description": "Build your project with TypeScript, setting up compilation.",
+      "files": [
+        "src/scripts/{{projectNameLower}}.ts",
+        "src/compiled/scripts/{{projectNameLower}}.js",
+        "tsconfig.json",
+        ".gitattributes"
+      ],
+      "excludedFiles": [
+        "src/scripts/{{projectNameLower}}.js"
+      ]
+    },
+    {
+      "name": "sass",
+      "description": "Build your project with Sass, setting up compilation.",
+      "files": [
+        "src/styles/main.scss",
+        "src/compiled/styles/main.css",
+        ".gitattributes"
+      ],
+      "excludedFiles": [
+        "src/styles/main.css"
+      ]
+    },
+    {
+      "name": "surge",
+      "description": "Test your project on another device with Surge CDN."
+    }
+  ]
+}

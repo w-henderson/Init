@@ -1,7 +1,7 @@
 use crate::{parse::InitConfig, ProjectConfig};
 use fancy_regex::Regex;
 use std::{
-    fs::{create_dir_all, File},
+    fs::{create_dir_all, remove_file, OpenOptions},
     io::Write,
     path::Path,
     process::Command,
@@ -27,7 +27,12 @@ pub fn init(config: &ProjectConfig, dir: include_dir::Dir) {
 
     for extra in &init_config.extras {
         if config.extras.contains(&extra.name) {
-            create_files(&extra.files, &dir, config, &init_config);
+            if let Some(extra_files) = &extra.files {
+                create_files(extra_files, &dir, config, &init_config);
+            }
+            if let Some(excluded_files) = &extra.excluded_files {
+                remove_files(excluded_files, config);
+            }
         }
     }
 }
@@ -47,7 +52,11 @@ fn create_files(
         let file_path_obj = Path::new(&file_path);
         let prefix = file_path_obj.parent().unwrap();
         create_dir_all(prefix).unwrap();
-        let mut file_obj = File::create(file_path_obj).unwrap();
+        let mut file_obj = OpenOptions::new()
+            .write(true)
+            .create(true)
+            .open(file_path_obj)
+            .unwrap();
         let mut file_contents = dir
             .get_file(format!("{}/{}", config.language, file))
             .unwrap()
@@ -91,5 +100,16 @@ fn create_files(
         file_obj
             .write_all(crate::parse::replace_placeholders(&file_contents, config).as_bytes())
             .unwrap();
+    }
+}
+
+fn remove_files(files: &[String], config: &ProjectConfig) {
+    for file in files {
+        let file_path = format!(
+            "{}/{}",
+            config.folder_name,
+            crate::parse::replace_placeholders(&file, config),
+        );
+        remove_file(file_path).unwrap_or(());
     }
 }

@@ -17,7 +17,9 @@ pub struct InitConfig {
 pub struct Extra {
     pub name: String,
     pub description: String,
-    pub files: Vec<String>,
+    pub files: Option<Vec<String>>,
+    #[serde(rename = "excludedFiles")]
+    pub excluded_files: Option<Vec<String>>,
 }
 
 pub fn get_directory() -> Dir<'static> {

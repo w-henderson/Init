@@ -1,0 +1,18 @@
+{
+    "compilerOptions": {
+        "outDir": "src/compiled/scripts",
+        "lib": [
+            "ES5",
+            "ES2015.Promise",
+            "ES2016.Array.Include",
+            "ES2017",
+            "ES2019",
+            "dom"
+        ],
+        "removeComments": true
+    },
+    "include": [
+        "src/scripts/*.ts",
+        "src/vendor/*.ts"
+    ],
+}

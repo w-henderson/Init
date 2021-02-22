@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{projectName}}</title>
+
+    //!startExtra "sass"
+    <link rel="stylesheet" href="compiled/styles/style.css">
+    //!endExtra
+    //!startExtra "!sass"
+    <link rel="stylesheet" href="styles/main.css">
+    //!endExtra
+</head>
+
+<body>
+    <h1>{{projectName}}</h1>
+
+    //!startExtra "typescript"
+    <script src="compiled/scripts/{{projectNameLower}}.js"></script>
+    //!endExtra
+    //!startExtra "!typescript"
+    <script src="scripts/{{projectNameLower}}.js"></script>
+    //!endExtra
+</body>
+
+</html>

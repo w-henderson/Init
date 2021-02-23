@@ -8,7 +8,6 @@
     "src/styles/main.css",
     "src/scripts/{{projectNameLower}}.js"
   ],
-  "commands": [],
   "filesContainingExtras": [
     "package.json",
     "src/index.html"

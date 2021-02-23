@@ -7,7 +7,6 @@
     "requirements.txt",
     "setup.py"
   ],
-  "commands": [],
   "filesContainingExtras": [
     "setup.py"
   ],

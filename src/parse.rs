@@ -7,10 +7,11 @@ use crate::ProjectConfig;
 #[derive(Serialize, Deserialize)]
 pub struct InitConfig {
     pub language: String,
-    pub files: Vec<String>,
+    pub files: Option<Vec<String>>,
+    pub commands: Option<Vec<String>>,
     #[serde(rename = "filesContainingExtras")]
-    pub files_containing_extras: Vec<String>,
-    pub extras: Vec<Extra>,
+    pub files_containing_extras: Option<Vec<String>>,
+    pub extras: Option<Vec<Extra>>,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -37,4 +38,5 @@ pub fn replace_placeholders(string: &str, config: &ProjectConfig) -> String {
         .replace("{{projectNameLower}}", &project_name_lower)
         .replace("{{author}}", &config.author)
         .replace("{{projectDescription}}", &config.description)
+        .replace("{{folderPath}}", &config.folder_name)
 }

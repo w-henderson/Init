@@ -14,6 +14,7 @@ pub fn init(config: &ProjectConfig, dir: include_dir::Dir) {
             .arg(&config.folder_name)
             .output()
             .expect("Please install git or pass the `--no-git` command.");
+        config.info("initialised git repo");
     }
 
     let init_file_str = dir
@@ -21,20 +22,38 @@ pub fn init(config: &ProjectConfig, dir: include_dir::Dir) {
         .unwrap()
         .contents_utf8()
         .unwrap();
+    config.info("read language init file");
 
     let init_config: InitConfig = crate::parse::parse_init_file(init_file_str).unwrap();
-    create_files(&init_config.files, &dir, config, &init_config);
 
-    for extra in &init_config.extras {
-        if config.extras.contains(&extra.name) {
-            if let Some(extra_files) = &extra.files {
-                create_files(extra_files, &dir, config, &init_config);
-            }
-            if let Some(excluded_files) = &extra.excluded_files {
-                remove_files(excluded_files, config);
+    // Copy base boilerplate files
+    if let Some(files) = &init_config.files {
+        create_files(files, &dir, config, &init_config);
+        config.info("copied base boilerplate files");
+    }
+
+    // Run base commands
+    if let Some(commands) = &init_config.commands {
+        run_commands(commands, &config);
+        config.info("run specified init commands");
+    }
+
+    // Copy extra files
+    if let Some(extras) = &init_config.extras {
+        for extra in extras {
+            if config.extras.contains(&extra.name) {
+                if let Some(extra_files) = &extra.files {
+                    create_files(extra_files, &dir, config, &init_config);
+                }
+                if let Some(excluded_files) = &extra.excluded_files {
+                    remove_files(excluded_files, config);
+                }
+                config.info(&format!("copied files for extra {}", extra.name));
             }
         }
     }
+
+    config.info("completed initialistion");
 }
 
 fn create_files(
@@ -64,7 +83,13 @@ fn create_files(
             .unwrap()
             .replace("\r\n", "\n"); // convert CRLF to LF because regex
 
-        if init_config.files_containing_extras.contains(file) {
+        if init_config.files_containing_extras.is_some()
+            && init_config
+                .files_containing_extras
+                .as_ref()
+                .unwrap()
+                .contains(file)
+        {
             let extra_regex =
                 Regex::new(r#"( *\t*)(#|//)!startExtra ".*?"\n[\s\S]*?(#|//)!endExtra\n?"#)
                     .unwrap();
@@ -111,5 +136,16 @@ fn remove_files(files: &[String], config: &ProjectConfig) {
             crate::parse::replace_placeholders(&file, config),
         );
         remove_file(file_path).unwrap_or(());
+    }
+}
+
+fn run_commands(commands: &[String], config: &ProjectConfig) {
+    for command in commands {
+        let parsed_command = crate::parse::replace_placeholders(command, config);
+        let command_parts: Vec<&str> = parsed_command.split(" ").collect();
+        Command::new(command_parts[0])
+            .args(&command_parts[1..])
+            .output()
+            .expect("Command failed to run");
     }
 }

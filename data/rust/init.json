@@ -1,0 +1,6 @@
+{
+  "language": "Rust",
+  "commands": [
+    "cargo init {{folderPath}} --name {{projectNameLower}} --vcs none"
+  ]
+}

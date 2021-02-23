@@ -14,6 +14,7 @@ pub struct ProjectConfig {
     pub description: String,
     pub extras: Vec<String>,
     pub git: bool,
+    pub verbose: bool,
 }
 
 fn main() {
@@ -27,7 +28,7 @@ fn main() {
                 Arg::with_name("language")
                     .required(true)
                     .index(1)
-                    .help("Language to initialise the project for."),
+                    .help("Language to initialise the project for. Use `init list` to list supported languages."),
             )
             .arg(Arg::with_name("name").index(2).help(
                 "Name of the project. If unspecified, will be implied from the directory name.",
@@ -68,9 +69,16 @@ fn main() {
                     .long("--no-git")
                     .help("Prevent init from initialising a Git repo.")
             )
+            .arg(
+                Arg::with_name("verbose")
+                    .short("v")
+                    .long("verbose")
+                    .help("Print extra information as the project is initialised.")
+            )
             .get_matches();
 
-    let cwd = current_dir()
+    // Get the name of the current directory
+    let cd_name = current_dir()
         .unwrap()
         .file_name()
         .unwrap()
@@ -78,10 +86,11 @@ fn main() {
         .unwrap()
         .to_owned();
 
+    // If no name is specified or you specify ".", default to current directory name
     let project_name = if args.is_present("name") && args.value_of("name").unwrap() != "." {
         args.value_of("name").unwrap()
     } else {
-        &cwd
+        &cd_name
     };
 
     // Parse the arguments into a config object
@@ -97,7 +106,10 @@ fn main() {
             .map(String::from)
             .collect(),
         git: !args.is_present("no-git"),
+        verbose: args.is_present("verbose"),
     };
+
+    config.info("parsed arguments and created config");
 
     // Ensure that the language is valid or list supported languages
     let directory = parse::get_directory();
@@ -105,7 +117,7 @@ fn main() {
         && (!directory.contains(&config.language)
             || !config.language.chars().all(char::is_alphabetic))
     {
-        println!("error: Language not supported, try `init list` to list supported languages");
+        config.err("language not supported, try `init list` to list supported languages");
         return;
     } else if config.language == "list" {
         println!("init currently supports the following languages:\n");
@@ -114,6 +126,8 @@ fn main() {
         }
         return;
     }
+
+    config.info("validated language choice");
 
     // If listing available extras, do that instead of initialising a project
     if args.is_present("list-extras") {
@@ -127,24 +141,43 @@ fn main() {
         .unwrap();
 
         println!("available extras for {}:\n", config.language);
-        let max = init_config
-            .extras
-            .iter()
-            .max_by(|x, y| x.name.len().cmp(&y.name.len()))
-            .unwrap()
-            .name
-            .len();
-        for extra in init_config.extras {
-            println!(
-                "  - {:width$}{}",
-                extra.name,
-                extra.description,
-                width = max + 8
-            );
+        if let Some(extras) = init_config.extras {
+            let max = extras
+                .iter()
+                .max_by(|x, y| x.name.len().cmp(&y.name.len()))
+                .unwrap()
+                .name
+                .len();
+            for extra in extras {
+                println!(
+                    "  - {:width$}{}",
+                    extra.name,
+                    extra.description,
+                    width = max + 8
+                );
+            }
+        } else {
+            println!("  - none");
         }
 
         return;
     }
 
+    config.info("starting initialisation");
+
     init(&config, directory);
+}
+
+impl ProjectConfig {
+    /// Runs `println!()` only if verbose is enabled
+    fn info(&self, string: &str) {
+        if self.verbose {
+            println!("info:    {}", string);
+        }
+    }
+
+    /// Runs `println!()`
+    fn err(&self, string: &str) {
+        println!("error:   {}", string);
+    }
 }
